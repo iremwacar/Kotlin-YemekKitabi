@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/listeFragment"
-        android:name="com.irem.yemekkitabi.ListeFragment"
+        android:name="com.irem.yemekkitabi.view.ListeFragment"
         android:label="fragment_liste"
         tools:layout="@layout/fragment_liste" >
         <action
@@ -16,7 +16,7 @@
     </fragment>
     <fragment
         android:id="@+id/tarifFragment"
-        android:name="com.irem.yemekkitabi.TarifFragment"
+        android:name="com.irem.yemekkitabi.view.TarifFragment"
         android:label="fragment_tarif"
         tools:layout="@layout/fragment_tarif" >
         <argument
