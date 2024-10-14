@@ -19,8 +19,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.navigation.Navigation
+import androidx.room.Room
 import com.google.android.material.snackbar.Snackbar
 import com.irem.yemekkitabi.databinding.FragmentTarifBinding
+import com.irem.yemekkitabi.model.Tarif
+import com.irem.yemekkitabi.roomdb.TarifDAO
+import com.irem.yemekkitabi.roomdb.TarifDatabase
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.disposables.CompositeDisposable
+import io.reactivex.rxjava3.schedulers.Schedulers
+import java.io.ByteArrayOutputStream
 
 
 class TarifFragment : Fragment() {
@@ -30,9 +39,16 @@ class TarifFragment : Fragment() {
     private lateinit var activityResultLauncher: ActivityResultLauncher<Intent>
     private var secilenGorsel : Uri?=null
     private var secilenBitmap : Bitmap?=null
+    private val mDisposable = CompositeDisposable()
+
+    private lateinit var db : TarifDatabase
+    private lateinit var tarifDao : TarifDAO
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         registerLauncher()
+
+        db = Room.databaseBuilder(requireContext(), TarifDatabase::class.java,"Tarifler").build()
+        tarifDao = db.tarifDao()
     }
 
     override fun onCreateView(
@@ -63,12 +79,38 @@ class TarifFragment : Fragment() {
             else{
                 binding.silButton.isEnabled =true
                 binding.kaydetButton.isEnabled=false
+
+
             }
         }
     }
 
     fun kaydet(view: View){
+        val isim = binding.isimText.text.toString()
+        val malzeme = binding.malzemeText.text.toString()
 
+        if (secilenBitmap != null){
+            val kucukBitmap = kucukBitmapOlustur(secilenBitmap!!,300)
+            val outputStream  = ByteArrayOutputStream()
+            kucukBitmap.compress(Bitmap.CompressFormat.PNG,50,outputStream)
+            val byteDizi = outputStream.toByteArray()
+
+            val tarif = Tarif(isim,malzeme,byteDizi)
+
+            //RxJava
+
+            mDisposable.add(tarifDao.insert(tarif)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(this::handleResponseForInser) )
+
+        }
+
+    }
+    private fun handleResponseForInser(){
+        //bir önceki fregmenta dön
+        val action = TarifFragmentDirections.actionTarifFragmentToListeFragment()
+        Navigation.findNavController(requireView()).navigate(action)
     }
 
     fun sil(view: View){
@@ -133,6 +175,26 @@ class TarifFragment : Fragment() {
                 activityResultLauncher.launch(intentToGallery)
             }
         }
+    }
+
+    private fun kucukBitmapOlustur(kullanicininSectigiBitmap : Bitmap, maximumBoyut : Int): Bitmap {
+        var width = kullanicininSectigiBitmap.width
+        var height = kullanicininSectigiBitmap.height
+
+        val bitmapOrani : Double = width.toDouble() / height.toDouble()
+        if (bitmapOrani>1){
+            //görsel yatay
+            width = maximumBoyut
+            val kisaltilmisYukseklik = width/ bitmapOrani
+            height = kisaltilmisYukseklik.toInt()
+        }
+        else{
+            //görsel dikey
+            height = maximumBoyut
+            val kisaltilmisGenislik = height* bitmapOrani
+            width = kisaltilmisGenislik.toInt()
+        }
+        return Bitmap.createScaledBitmap(kullanicininSectigiBitmap,width,height,true)
     }
 
     private fun registerLauncher(){
